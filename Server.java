@@ -45,8 +45,8 @@ public class Server {
 
         @Override
         public void run() { //สร้าง Object 2 ตัวคือ dis และ dos 
-            try (DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //dis เป็น object ที่สร้างเพื่ออ่านข้อมูลไปจาก client ที่ส่งมา Server
-                 DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream())) { //dos เป็น object ที่สร้างเพื่อเขียนข้อมูลไปสู่ client 
+            try (DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //dis เป็น object ที่สร้างเพื่ออ่านข้อมูลจาก client ที่ส่งมายัง Server
+                 DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream())) { //dos เป็น object ที่สร้างเพื่อเขียนข้อมูลจาก server ไปสู่ client 
                 //ที่ใช้  DataOutputStream เพราะมีเมธอดเฉพาะอย่าง readInt(), readFloat(), readUTF() ซึ่งช่วยในการอ่านข้อมูลพื้นฐานโดยตรง ไม่ต้องแปลงข้อมูลเพิ่มเติมเอง
                 
                 // ส่งรายชื่อไฟล์ไปยังลูกค้า
