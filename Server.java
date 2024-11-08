@@ -15,13 +15,13 @@ public class Server {
     public static void main(String[] args) {
         ServerSocket serverSocket = null;
         try {
-            serverSocket = new ServerSocket(PORT);
+            serverSocket = new ServerSocket(PORT); //สร้าง Socket รับส่งข้อมูล
             System.out.println("Server started on port " + PORT);
 
             while (true) {
-                Socket clientSocket = serverSocket.accept();
-                Thread clientHandler = new ClientHandler(clientSocket);
-                clientHandler.start();
+                Socket clientSocket = serverSocket.accept(); //รอรับการเชื่อมต่อจาก client
+                Thread clientHandler = new ClientHandler(clientSocket); //เมื่อ client ติดต่อมาก็สร้าง Thread 
+                clientHandler.start(); //ใช้ Object clientHandler เรียกใช้ start เพื่อเริ่มการทำงาน
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -36,60 +36,65 @@ public class Server {
         }
     }
 
-    private static class ClientHandler extends Thread {
+    private static class ClientHandler extends Thread { // class thread จัดการการเชื่อมต่อของ client
         private Socket clientSocket;
 
         public ClientHandler(Socket socket) {
-            this.clientSocket = socket;
+            this.clientSocket = socket; //รับ socket ของ client มา
         }
 
         @Override
-        public void run() {
-            try (DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
-                 DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream())) {
-
+        public void run() { //สร้าง Object 2 ตัวคือ dis และ dos 
+            try (DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //dis เป็น object ที่สร้างเพื่ออ่านข้อมูลไปจาก client ที่ส่งมา Server
+                 DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream())) { //dos เป็น object ที่สร้างเพื่อเขียนข้อมูลไปสู่ client 
+                //ที่ใช้  DataOutputStream เพราะมีเมธอดเฉพาะอย่าง readInt(), readFloat(), readUTF() ซึ่งช่วยในการอ่านข้อมูลพื้นฐานโดยตรง ไม่ต้องแปลงข้อมูลเพิ่มเติมเอง
+                
                 // ส่งรายชื่อไฟล์ไปยังลูกค้า
-                File directory = new File(FILES_DIR);
-                File[] files = directory.listFiles();
+                File directory = new File(FILES_DIR); //สร้าง object directory ของ didrectory ที่ใช้เก็บไฟล์ video ของฝั่ง server
+                File[] files = directory.listFiles(); //อ่านไฟล์ที่มีใน didrectory ของฝั่ง server ลงในตัวแปร files ที่เป็นอาเรย์
                 List<String> fileNames = new ArrayList<>();
                 if (files != null) {
                     for (File file : files) {
                         if (file.isFile()) {
-                            fileNames.add(file.getName());
+                            fileNames.add(file.getName()); //เก็บชื่อไฟล์ทั้งหมดไว้ใน ตัวแปร fileNames ที่เป็นอาเรย์ลิสต์
                         }
                     }
                 }
                 dos.writeInt(fileNames.size());
                 for (String fileName : fileNames) {
-                    dos.writeUTF(fileName);
+                    dos.writeUTF(fileName); //ใช้ object dos เขียน(ส่ง)ชื่อไฟล์ที่มีใน server ไปให้ client
                 }
 
                 // รับชื่อไฟล์ที่ลูกค้าต้องการและวิธีการส่ง
-                String requestedFileName = dis.readUTF();
-                int transferMethod = dis.readInt(); // รับวิธีการส่ง
+                String requestedFileName = dis.readUTF(); //ตัวแปร  requestedFileName เก็บชื่อไฟล์ที่ client ต้องการ โดยการอ่านผ่าน object dis
+                int transferMethod = dis.readInt(); // ตัวแปร transferMethod เก็บวิธีที่ client ต้องการใช้รับส่งไฟล์ โดยการอ่านผ่าน object dis
                 System.out.println("Client requested file: " + requestedFileName);
 
-                File fileToSend = new File(FILES_DIR + File.separator + requestedFileName);
-                if (fileToSend.exists()) {
-                    dos.writeLong(fileToSend.length());
-
-                    if (transferMethod == 2) { // Zero-copy
-                        try (FileInputStream fis = new FileInputStream(fileToSend);
-                             FileChannel fileChannel = fis.getChannel();
-                             WritableByteChannel writableChannel = Channels.newChannel(dos)) {
+                File fileToSend = new File(FILES_DIR + File.separator + requestedFileName); //สร้าง object fileToSend ของไฟล์ video ที่ฝั่ง client ต้องการ
+                if (fileToSend.exists()) { //ตรวจสอบ path ส่าถูกต้องมีไฟล์ video ที่ client ต้องการ
+                    dos.writeLong(fileToSend.length()); //เขียน(ส่ง)ขนาดของไฟล์ video ไปให้ client
+                    // Zero-copy
+                    if (transferMethod == 2) { //ตรวจสอบตัวแปร transferMethod ว่าต้องการส่งแบบไหน
+                        try (FileInputStream fis = new FileInputStream(fileToSend);  //สร้าง object fis เพื่อชี้ไปยังไฟล์ที่ต้องการอ่าน
+                             FileChannel fileChannel = fis.getChannel(); //สร้าง object fileChannel จากคลาส FileChannel เพื่อให้สามารถเข้าถึงข้อมูลในไฟล์ video ได้โดยตรง
+                             WritableByteChannel writableChannel = Channels.newChannel(dos)) { //ใช้ Channels.newChannel(dos) เพื่อแปลง DataOutputStream (dos) ให้กลายเป็น WritableByteChannel ซึ่งสามารถใช้งานร่วมกับ transferTo ได้
                             
-                            long position = 0;
-                            long size = fileChannel.size();
-                            while (position < size) {
-                                position += fileChannel.transferTo(position, size - position, writableChannel);
+                            long position = 0; //กำหนดตำแหน่งเริ่มต้นของข้อมูลที่จะถ่ายโอนใน FileChannel
+                            long size = fileChannel.size(); //ตัวแปร size เก็บขนาดทั้งหมดของไฟล์
+                            while (position < size) { //วนลูปจนกว่าจะถ่ายโอนข้อมูลครบ (ตำแหน่งแรกที่ถ่ายโอนยังน้อยกว่าขนาดไฟล์ที่เหลือ)
+                                position += fileChannel.transferTo(position, size - position, writableChannel); //ทำการถ่ายโอนข้อมูลจาก FileChannel ไปยัง WritableByteChannel 
+                                //fileChannel.transferTo(ตำแหน่งแรกที่เริ่มถ่ายโอน,จำนวนไบต์ที่เหลือ, channel ที่จะรับข้อมูล);
+                                //การทำงานของ transferTo จะเพิ่ม position ด้วยจำนวน byte ที่ได้ถ่ายโอนในแต่ละครั้ง ซึ่งทำให้ position เพิ่มขึ้นเรื่อย ๆ จนกระทั่งเท่ากับ size
+                                //transferTo มีประสิทธิภาพสูงกว่าเมื่อเทียบกับการอ่านข้อมูลด้วย buffer ทีละน้อยแล้วเขียนต่อไปยัง output เพราะมันสามารถถ่ายโอนข้อมูลในระดับ OS kernel ได้โดยตรง ซึ่งลดการใช้หน่วยความจำและทำให้ทำงานได้เร็วขึ้น
                             }
                         }
-                    } else { // Regular copy
-                        try (FileInputStream fis = new FileInputStream(fileToSend)) {
-                            byte[] buffer = new byte[8192];
-                            int read;
-                            while ((read = fis.read(buffer)) != -1) {
-                                dos.write(buffer, 0, read);
+                    // Regular I/O copy
+                    } else { 
+                        try (FileInputStream fis = new FileInputStream(fileToSend)) { //สร้าง object fis เพื่อชี้ไปยังไฟล์ที่ต้องการอ่าน
+                            byte[] buffer = new byte[8192]; //สร้างขนาด buffer ในการอ่านไฟล์
+                            int read; //ตัวแปร read เก็บค่าที่อ่านในแต่จะรอบ
+                            while ((read = fis.read(buffer)) != -1) { //ให้ object fis ที่สร้างจากคลาส FileInputStream เรียกใช้ method read() เพื่อทำการอ่านไฟล์ (อ่านเป็นไบต์) และเก็บไว้ในตัวแปร buffer     
+                                dos.write(buffer, 0, read); //ให้ object dos เรียกใช้ method write เพื่อเขียน(ส่ง)ไฟล์ที่อ่านจาก buffer ไปให้ client
                             }
                         }
                     }
