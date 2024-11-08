@@ -78,7 +78,7 @@ public class Server {
                         try (FileInputStream fis = new FileInputStream(fileToSend);  //สร้าง object fis เพื่อชี้ไปยังไฟล์ที่ต้องการอ่าน
                              FileChannel fileChannel = fis.getChannel(); //สร้าง object fileChannel จากคลาส FileChannel เพื่อให้สามารถเข้าถึงข้อมูลในไฟล์ video ได้โดยตรง
                              WritableByteChannel writableChannel = Channels.newChannel(dos)) { //ใช้ Channels.newChannel(dos) เพื่อแปลง DataOutputStream (dos) ให้กลายเป็น WritableByteChannel ซึ่งสามารถใช้งานร่วมกับ transferTo ได้
-                            
+                            // สร้าง WritableByteChannel (writableChannel) จาก DataOutputStream (dos) ซึ่งใช้สำหรับส่งข้อมูลออกไปในช่องทางที่สามารถเขียนข้อมูลได้ เช่น socket
                             long position = 0; //กำหนดตำแหน่งเริ่มต้นของข้อมูลที่จะถ่ายโอนใน FileChannel
                             long size = fileChannel.size(); //ตัวแปร size เก็บขนาดทั้งหมดของไฟล์
                             while (position < size) { //วนลูปจนกว่าจะถ่ายโอนข้อมูลครบ (ตำแหน่งแรกที่ถ่ายโอนยังน้อยกว่าขนาดไฟล์ที่เหลือ)
